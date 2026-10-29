@@ -1,7 +1,6 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
-using System.Globalization;
-using System.Windows.Forms;
 
 internal static class Program
 {
@@ -12,7 +11,7 @@ internal static class Program
         var serwisy = Enumerable.Range(1, 30).Select(i => $"Serwis {i}").ToList();
         var poczatkowePary = new Dictionary<string, string>
         {
-            ["Anna"] = "Serwis 1",
+            ["Annssa"] = "Serwis 1",
             ["Bartek"] = "Serwis 2"
         };
 
