@@ -10,3 +10,15 @@ Wymaga Windows. Projekt używa net9.0-windows i UseWindowsForms, a Main ma atryb
 
 Domyślnie minimum 20 wierszy danych (brakujące puste). Parametr minRows: 0 daje tylko wiersze osób.
 Początkowe pary są zachowane; pozostałe serwisy są rozdzielane losowo i równo.
+
+Początkowy słownik ma postać `serwis → osoba`, np. `["Serwis 1"] = "Anna"`.
+Metody `Generate` i `Distribute` zwracają krotkę z wynikiem oraz użytym seedem.
+Bez podania seeda losują nowy; program wypisuje go w konsoli.
+
+```csharp
+var (html, seed) = OutlookTable.Generate(poczatkowePary, osoby, serwisy);
+var (tenSamHtml, _) = OutlookTable.Generate(poczatkowePary, osoby, serwisy, seed: seed);
+var (przydzialy, uzytySeed) = OutlookTable.Distribute(poczatkowePary, osoby, serwisy, seed: 123);
+```
+
+Ten sam seed, te same dane i kolejność list oraz ta sama wersja .NET dają ten sam wynik.

@@ -11,13 +11,14 @@ internal static class Program
         var serwisy = Enumerable.Range(1, 30).Select(i => $"Serwis {i}").ToList();
         var poczatkowePary = new Dictionary<string, string>
         {
-            ["Annssa"] = "Serwis 1",
-            ["Bartek"] = "Serwis 2"
+            ["Serwis 1"] = "Anna",
+            ["Serwis 2"] = "Bartek"
         };
 
-        string result = OutlookTable.Generate(poczatkowePary, osoby, serwisy);
+        var (result, seed) = OutlookTable.Generate(poczatkowePary, osoby, serwisy);
 
         HtmlClipboard.Copy(result);
+        Console.WriteLine($"Seed: {seed}");
         Console.WriteLine("Tabela skopiowana. Wklej Ctrl+V w wiadomości HTML w Outlooku (z zachowaniem formatowania źródła).");
     }
 }
@@ -50,19 +51,19 @@ public static class HtmlClipboard
 public static class OutlookTable
 {
     /// <summary>
-    /// Zwraca tabelę HTML: osoba i jej serwisy. Początkowe pary osoba → serwis
+    /// Zwraca tabelę HTML i seed: osoba i jej serwisy. Początkowe pary serwis → osoba
     /// są zachowane, a reszta jest losowo przydzielana najmniej obciążonym osobom.
     /// minRows to minimalna liczba wierszy danych (bez nagłówka).
     /// </summary>
-    public static string Generate(
+    public static (string Html, int Seed) Generate(
         Dictionary<string, string> initialPairs,
         List<string> people,
         List<string> services,
         int minRows = 20,
-        Random? random = null)
+        int? seed = null)
     {
-        var assignments = Distribute(initialPairs, people, services, random);
         ArgumentOutOfRangeException.ThrowIfNegative(minRows);
+        var (assignments, usedSeed) = Distribute(initialPairs, people, services, seed);
         var html = new StringBuilder();
         html.Append("<table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:600px;border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#222222;\">");
         html.Append("<tr><th width=\"180\" align=\"left\" bgcolor=\"#D9E2F3\" style=\"border:1px solid #A6A6A6;padding:8px;\">Osoba</th><th width=\"420\" align=\"left\" bgcolor=\"#D9E2F3\" style=\"border:1px solid #A6A6A6;padding:8px;\">Serwis</th></tr>");
@@ -77,14 +78,14 @@ public static class OutlookTable
             html.Append($"<tr><td valign=\"top\" bgcolor=\"{color}\" style=\"border:1px solid #A6A6A6;padding:8px;background-color:{color};\">{person}</td><td valign=\"top\" bgcolor=\"{color}\" style=\"border:1px solid #A6A6A6;padding:8px;line-height:22px;background-color:{color};\">{items}</td></tr>");
         }
 
-        return html.Append("</table>").ToString();
+        return (html.Append("</table>").ToString(), usedSeed);
     }
 
-    public static Dictionary<string, List<string>> Distribute(
+    public static (Dictionary<string, List<string>> Assignments, int Seed) Distribute(
         Dictionary<string, string> initialPairs,
         List<string> people,
         List<string> services,
-        Random? random = null)
+        int? seed = null)
     {
         ArgumentNullException.ThrowIfNull(initialPairs);
         ArgumentNullException.ThrowIfNull(people);
@@ -94,12 +95,13 @@ public static class OutlookTable
         if (people.Count == 0)
             throw new ArgumentException("Lista osób nie może być pusta.", nameof(people));
 
-        random ??= Random.Shared;
+        int usedSeed = seed ?? Random.Shared.Next();
+        var random = new Random(usedSeed);
         var result = people.ToDictionary(p => p, _ => new List<string>(), StringComparer.Ordinal);
         var available = services.ToHashSet(StringComparer.Ordinal);
-        foreach (var (person, service) in initialPairs)
+        foreach (var (service, person) in initialPairs.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
-            if (!result.ContainsKey(person))
+            if (person is null || !result.ContainsKey(person))
                 throw new ArgumentException($"Nieznana osoba w początkowych parach: {person}", nameof(initialPairs));
             if (service is null || !available.Remove(service))
                 throw new ArgumentException($"Serwis nie istnieje lub został przypisany dwukrotnie: {service}", nameof(initialPairs));
@@ -114,7 +116,7 @@ public static class OutlookTable
             var candidates = people.Where(p => result[p].Count == min).ToArray();
             result[candidates[random.Next(candidates.Length)]].Add(service);
         }
-        return result;
+        return (result, usedSeed);
     }
 
     private static void ValidateNames(List<string> values, string parameter)
